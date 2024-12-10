@@ -1,0 +1,10 @@
+cur.execute('CREATE EXTENSION azure_ai;')
+
+
+select azure_ai.set_setting('azure_cognitive.endpoint','https://api.cognitive.xxxxxx.com/');
+select azure_ai.set_setting('azure_cognitive.subscription_key', 'axxxxxxxx');
+-- the region setting is only required for the translate function
+select azure_ai.set_setting('azure_cognitive.region', 'xxxxxx');
+
+SELECT (unnest(a.translations)).text
+FROM azure_cognitive.translate('Language Translation in real time in multiple languages is quite cool', array['es', 'pt', 'zh-Hans']) a;
