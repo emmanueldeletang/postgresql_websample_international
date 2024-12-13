@@ -2,12 +2,24 @@ import os
 import psycopg2
 from flask import Flask, render_template, request, url_for, redirect
 from dotenv import dotenv_values
+from openai import AzureOpenAI
 
 
 env_name = "example.env" # following example.env template change to your own .env file name
 config = dotenv_values(env_name)
 
 # Connect to PostgreSQL
+
+openai_endpoint = config['openai_endpoint']
+openai_key = config['openai_key']
+openai_version = config['openai_version']
+openai_chat_model = config['AZURE_OPENAI_CHAT_MODEL']
+
+openai_client = AzureOpenAI(
+  api_key = openai_key,  
+  api_version = openai_version,  
+  azure_endpoint =openai_endpoint 
+)
 
 app = Flask(__name__)
 """
@@ -43,6 +55,64 @@ def set_language():
     Retrieves the language preference from cookies or form data,
     establishes a database connection, and renders the index page.
 """
+@app.route('/about', methods=('GET', 'POST'))
+def about():
+    return render_template('about.html')
+
+
+def get_completion(openai_client, model, prompt: str):    
+   
+    print(model)
+    print(openai_client)
+    response = openai_client.chat.completions.create(
+        model = model,
+        messages =   prompt,
+        temperature = 0.1
+    )   
+    print(response)
+    
+    return response.model_dump()
+
+def  ask_dbvector(textuser):  
+    
+    conn = get_db_connection()
+    cur = conn.cursor()
+    query = f"""SELECT
+     e.title, e.author, e.pages_num, e.review, e.date_added
+    FROM books e  where e.dvector <=> azure_openai.create_embeddings('text-embedding-ada-002', ' """ + str(textuser) + """')::vector < 0.25  ORDER BY  e.dvector <=> azure_openai.create_embeddings('text-embedding-ada-002','""" + str(textuser) +"""')::vector  LIMIT 4;"""
+    print (query)
+    
+    cur.execute(query)
+    resutls = str(cur.fetchall())
+
+    return resutls 
+
+def generatecompletionede(user_prompt) -> str:
+    
+ 
+    system_prompt = f'''
+    You are an AI assistant that is able to look for information in a book database , base on the review, title, author, and number of pages.
+    .the answer should be in the language of the user's choice.the answer should be in the following format:
+    title: <title>
+    author: <author>
+    review: <review>
+    resume of the book: <review>
+        '''     
+    
+    messages = [{'role': 'system', 'content': system_prompt}]
+    #user prompt
+    messages.append({'role': 'user', 'content': user_prompt})
+    
+    vector_search_results =  ask_dbvector(user_prompt)
+    
+    for result in vector_search_results:
+        print (result)
+        # res = result[ "title"] + result[ "author" ]+  result["review"] 
+        messages.append({'role': 'system', 'content': result})
+    
+    response = get_completion(openai_client, openai_chat_model, messages)
+
+    return response['choices'][0]['message']['content']
 
 
 @app.route('/', methods=('GET', 'POST'))
@@ -86,6 +156,21 @@ def create():
         return redirect(url_for('index'))
 
     return render_template('create.html')
+
+
+
+@app.route('/search/', methods=['GET', 'POST'])
+def search():
+   
+    result2 = None
+    if request.method == 'POST':
+        user_prompt = request.form['prompt']
+        
+        result2 = generatecompletionede(user_prompt)
+        
+       
+      
+    return render_template('search.html',result2=result2 )
 
 
 if __name__ == '__main__':
