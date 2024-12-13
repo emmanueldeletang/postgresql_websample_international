@@ -5,7 +5,8 @@ Flask web app to show the integration with translation to store data and show in
 ## Features
 - web applicaiton to insert book in your langage 
 - visualisation of the book with translation in postgresql to show the integration with translation
-- add a search engine using the search capacity of vector search in postgreql with adding vector and automation llm 
+- add a search engine using the search capacity of vector search in postgreql with adding vector and automation llm
+- add the completions in a cache table and if the same question is ask , use the cache ( first question can take seconds , the same some ms ) 
 
 
 ## Requirements
