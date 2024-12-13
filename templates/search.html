@@ -1,0 +1,19 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h1>SQL Query Generator</h1>
+    <form method="POST">
+        <label for="prompt">Enter your prompt:</label>
+        <textarea id="prompt" name="prompt" rows="10" cols="50" required></textarea>
+        <button type="submit">Generate and Execute Query</button>
+
+
+    </form>
+    
+    <label for="prompt">result of  emmbedding query :</label>
+    {% if result2 %}
+        <h2>Result2:</h2>
+        <pre>{{ result2 }}</pre>
+    {% endif %}
+	
+{% endblock %}
