@@ -3,6 +3,7 @@ import psycopg2
 from flask import Flask, render_template, request, url_for, redirect
 from dotenv import dotenv_values
 from openai import AzureOpenAI
+import time
 
 
 env_name = "example.env" # following example.env template change to your own .env file name
@@ -62,14 +63,13 @@ def about():
 
 def get_completion(openai_client, model, prompt: str):    
    
-    print(model)
-    print(openai_client)
+    
     response = openai_client.chat.completions.create(
         model = model,
         messages =   prompt,
         temperature = 0.1
     )   
-    print(response)
+    
     
     return response.model_dump()
 
@@ -80,7 +80,7 @@ def  ask_dbvector(textuser):
     query = f"""SELECT
      e.title, e.author, e.pages_num, e.review, e.date_added
     FROM books e  where e.dvector <=> azure_openai.create_embeddings('text-embedding-ada-002', ' """ + str(textuser) + """')::vector < 0.25  ORDER BY  e.dvector <=> azure_openai.create_embeddings('text-embedding-ada-002','""" + str(textuser) +"""')::vector  LIMIT 4;"""
-    print (query)
+ 
     
     cur.execute(query)
     resutls = str(cur.fetchall())
@@ -106,14 +106,42 @@ def generatecompletionede(user_prompt) -> str:
     vector_search_results =  ask_dbvector(user_prompt)
     
     for result in vector_search_results:
-        print (result)
+     
         # res = result[ "title"] + result[ "author" ]+  result["review"] 
         messages.append({'role': 'system', 'content': result})
     
     response = get_completion(openai_client, openai_chat_model, messages)
 
-    return response['choices'][0]['message']['content']
+    return response
 
+def cacheresponse(user_prompt,  response ):
+
+    
+        
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute('INSERT INTO tablecahe (prompt, completion, completiontokens, promptTokens,totalTokens, model)'
+                    'VALUES (%s, %s, %s, %s ,%s, %s)',
+                    (user_prompt, response['choices'][0]['message']['content'], response['usage']['completion_tokens'], response['usage']['prompt_tokens'],response['usage']['total_tokens'], response['model']))
+    
+
+
+    print("item inserted into cache.")
+    conn.commit()
+    cur.close()
+    conn.close()
+
+
+def cachesearch(test):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    query = f"""SELECT e.completion
+    FROM tablecahe e  where e.dvector <=> azure_openai.create_embeddings('text-embedding-ada-002', ' """ + str(test) + """')::vector > 0.01  ORDER BY  e.dvector <=> azure_openai.create_embeddings('text-embedding-ada-002','""" + str(test) +"""')::vector  LIMIT 1;"""
+    
+    cur.execute(query)
+    resutls = cur.fetchall()
+
+    return resutls
 
 @app.route('/', methods=('GET', 'POST'))
 def index():
@@ -124,11 +152,11 @@ def index():
     
     conn = get_db_connection()
     cur = conn.cursor()
-    print (language)
+    
         
     query = f"""SELECT a.id, (unnest(b.translations)).text as title, (unnest(c.translations)).text as author ,a.pages_num, (unnest(d.translations)).text as review , a.date_added  FROM books a, azure_cognitive.translate(title,'""" + language + """') b,  azure_cognitive.translate(author,'""" + language + """') c , azure_cognitive.translate(review,'""" + language + """') d"""
     
-    print (query)
+   
     
     cur.execute(query)
     books = cur.fetchall()
@@ -165,10 +193,25 @@ def search():
     result2 = None
     if request.method == 'POST':
         user_prompt = request.form['prompt']
+        cache_results = cachesearch(user_prompt)
+        print(cache_results)
+        start_time = time.time()
+        if len(cache_results) > 0:
+            
+            result2 =  str(cache_results[0])
+            end_time = time.time()
+            elapsed_time = round((end_time - start_time) * 1000, 2)
+            details = f"\n (Time: {elapsed_time}ms)" " (Cached)"
+            result2 = result2 + details
+        else:
+           response = generatecompletionede(user_prompt)
+           result2 = response['choices'][0]['message']['content']
+           cacheresponse(user_prompt, response)
+           end_time = time.time()
+           elapsed_time = round((end_time - start_time) * 1000, 2)
+           details = f"\n (Time: {elapsed_time}ms)"
+           result2 = result2 +  details 
         
-        result2 = generatecompletionede(user_prompt)
-        
-       
       
     return render_template('search.html',result2=result2 )
 
