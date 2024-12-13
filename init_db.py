@@ -46,6 +46,20 @@ cur.execute('INSERT INTO books (title, author, pages_num, review)'
              'C est en 1823 qu un jeune homme nommé William Webb Ellis a eu la belle idée, au cours d une partie de  football ,  de prendre le ballon avec les mains sur un terrain du collège de la ville  de Rugby, en Angleterre, et d  inventer  ainsi un sport.C est une fantastique aventure que nous vous racontons ici, des premiers matchs improvisés dans les collèges anglais jusqu C’est en 1823 qu’un jeune homme nommé William Webb Ellis a eu la belle idée, au cours d’une partie de « football »,  de prendre le ballon avec les mains sur un terrain du collège de la ville  de Rugby, en Angleterre, et d  inventer  ainsi un sport.')
             )
 
+cur.execute('INSERT INTO books (title, author, pages_num, review)'
+            'VALUES (%s, %s, %s, %s)',
+           ('Bàrnabo delle montagne (italiano)',
+             'Dino Buzzati',
+             132,
+             'i suoi compagni e si nasconde. Una volta terminato lassalto, in cui Bertòn rimane ferito ad una gamba, Bàrnabo ritorna dai guardaboschi. Non riuscendo a giustificare la propria assenza, il giovane viene licenziato e scacciato. Amareggiato, si reca dal cugino in campagna e lavora  come contadino. Ma lex-guardaboschi ha nostalgia delle montagne e rimpiange la sua vita passata. Passano alcuni anni. Un giorno, Bàrnabo incontra il suo amico Bertòn, che gli consiglia di tornare. Bàrnabo viene anche a sapere che i briganti hanno nuovamente attaccato. Lanno seguente,  accompagnato da Bertòn, Bàrnabo ritorna; la Polveriera è stata svuotata, munizioni ed esplosivi trasferiti al paese. Bàrnabo accetta di rimanere solo, come unico guardaboschi. I compagni gli promettono di raggiungerlo in occasione di un atteso ritorno dei briganti. Bàrnabo, da solo, attende i briganti, che effettivamente arrivano. Il guardaboschi li prende di mira; ma, ora che non ha più paura e ha la possibilità di rifarsi, sceglie deliberatamente, di non sparare: ormai ha trovato la serenità. I briganti si allontanano per non tornare più, e Bàrnabo resta a vivere in solitudine tra le sue montagne.')
+    )
+
+
+cmd = """ALTER TABLE books  ADD COLUMN dvector vector(1536)  GENERATED ALWAYS AS ( azure_openai.create_embeddings('text-embedding-ada-002', review)::vector) STORED; """
+cur.execute(cmd)
+
+cmd2 = """CREATE INDEX indexvector ON books USING hnsw (dvector vector_l2_ops) WITH (m = 16, ef_construction = 64);"""
+cur.execute(cmd2)
 # Commit the transaction
 conn.commit()
 
