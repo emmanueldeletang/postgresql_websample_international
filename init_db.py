@@ -18,7 +18,24 @@ cur = conn.cursor()
 
 # Execute a command: this creates a new table
 
+cur.execute('DROP TABLE IF EXISTS tablecache;')
 
+cur.execute('CREATE TABLE tablecahe (id serial PRIMARY KEY,'
+                                 'prompt text  NOT NULL,'
+                                 'completion text NOT NULL,'
+                                 'completiontokens integer NOT NULL,'
+                                 'promptTokens integer NOT NULL,'
+                                 'totalTokens integer NOT NULL,'
+                                 'model varchar(150) NOT NULL,'   
+                                 'date_added date DEFAULT CURRENT_TIMESTAMP);'
+        )
+
+
+cmd = """ALTER TABLE tablecahe  ADD COLUMN dvector vector(1536)  GENERATED ALWAYS AS ( azure_openai.create_embeddings('text-embedding-ada-002', prompt)::vector) STORED; """
+cur.execute(cmd)
+
+cm = """CREATE INDEX indextablevector ON tablecahe USING hnsw (dvector vector_l2_ops) WITH (m = 16, ef_construction = 64);"""
+cur.execute(cm)
 
 cur.execute('DROP TABLE IF EXISTS books;')
 cur.execute('CREATE TABLE books (id serial PRIMARY KEY,'
