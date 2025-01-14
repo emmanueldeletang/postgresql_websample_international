@@ -34,6 +34,8 @@ cur.execute('CREATE TABLE tablecahe (id serial PRIMARY KEY,'
 cmd = """ALTER TABLE tablecahe  ADD COLUMN dvector vector(1536)  GENERATED ALWAYS AS ( azure_openai.create_embeddings('text-embedding-ada-002', prompt)::vector) STORED; """
 cur.execute(cmd)
 
+# if diskann is enable replace the following cmd by cmd = """CREATE INDEX tablecahe_embedding_diskann_idx ON tablecahe USING diskann (dvector vector_cosine_ops)"""
+
 cm = """CREATE INDEX indextablevector ON tablecahe USING hnsw (dvector vector_l2_ops) WITH (m = 16, ef_construction = 64);"""
 cur.execute(cm)
 
