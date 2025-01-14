@@ -2,6 +2,8 @@
 
 CREATE EXTENSION azure_ai;
 CREATE EXTENSION vector;
+-- if diskann is enable do CREATE EXTENSION IF NOT EXISTS pg_diskann CASCADE;
+
 
 select azure_ai.set_setting('azure_cognitive.endpoint','https://api.cognitive.xxxxxx.com/');
 select azure_ai.set_setting('azure_cognitive.subscription_key', 'axxxxxxxx');
