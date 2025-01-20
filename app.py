@@ -136,7 +136,7 @@ def cachesearch(test):
     conn = get_db_connection()
     cur = conn.cursor()
     query = f"""SELECT e.completion
-    FROM tablecahe e  where e.dvector <=> azure_openai.create_embeddings('text-embedding-ada-002', ' """ + str(test) + """')::vector > 0.01  ORDER BY  e.dvector <=> azure_openai.create_embeddings('text-embedding-ada-002','""" + str(test) +"""')::vector  LIMIT 1;"""
+    FROM tablecahe e  where e.dvector <=> azure_openai.create_embeddings('text-embedding-ada-002', ' """ + str(test) + """')::vector > 0.02  ORDER BY  e.dvector <=> azure_openai.create_embeddings('text-embedding-ada-002','""" + str(test) +"""')::vector  LIMIT 1;"""
     
     cur.execute(query)
     resutls = cur.fetchall()
