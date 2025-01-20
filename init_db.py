@@ -74,7 +74,7 @@ cur.execute('INSERT INTO books (title, author, pages_num, review)'
     )
 
 
-CREATE INDEX books_embedding_diskann_idx ON books USING diskann (dvector vector_cosine_ops)
+# CREATE INDEX books_embedding_diskann_idx ON books USING diskann (dvector vector_cosine_ops)
 
 
 cmd = """ALTER TABLE books  ADD COLUMN dvector vector(1536)  GENERATED ALWAYS AS ( azure_openai.create_embeddings('text-embedding-ada-002', review)::vector) STORED; """
